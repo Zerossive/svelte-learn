@@ -1,22 +1,91 @@
 <script lang="ts">
+	import { fly } from 'svelte/transition'
 	import Header from './Header.svelte'
 
-	let name = $state('Danny')
+	let formState = $state({
+		answers: {},
+		step: 0,
+		error: ''
+	})
 
-	let status: 'OPEN' | 'CLOSED' = $state('OPEN')
-	let full_name = $derived(name + ' ' + 'Harris')
+	$inspect(formState.step)
 
-	function toggle() {
-		status = status === 'OPEN' ? 'CLOSED' : 'OPEN'
+	const QUESTIONS = [
+		{
+			question: 'What is your name?',
+			id: 'name',
+			type: 'text'
+		},
+		{
+			question: 'What is your birthday?',
+			id: 'birthday',
+			type: 'date'
+		},
+		{
+			question: 'What is your favorite color?',
+			id: 'color',
+			type: 'color'
+		}
+	]
+
+	function nextStep(id: string) {
+		if (formState.answers[id]) {
+			formState.step += 1
+			formState.error = ''
+		} else {
+			formState.error = 'Please fill out the form input'
+		}
 	}
+
+	// $effect(() => {
+	// 	console.log('on mounted')
+	// 	return () => {
+	// 		console.log('on unmounted')
+	// 	}
+	// })
+	//
+	// $effect(() => {
+	// 	console.log('formState', formState.step)
+	// })
 </script>
 
-<Header {name} />
+<Header name={formState.answers.name} />
 
-<h2>{full_name}</h2>
+<main>
+	{#if formState.step >= QUESTIONS.length}
+		<p>Thank you!</p>
+	{:else}
+		<p>Step: {formState.step + 1}</p>
+	{/if}
 
-<input type="text" bind:value={name} />
+	{#each QUESTIONS as question, index (question.id)}
+		{#if formState.step === index}
+			<div
+				in:fly={{ x: 200, duration: 200, opacity: 0, delay: 200 }}
+				out:fly={{ x: -200, duration: 200, opacity: 0 }}
+			>
+				{@render formStep(question)}
+			</div>
+		{/if}
+	{/each}
 
-<p>The store is now {status}</p>
+	{#if formState.error}
+		<p class="error">{formState.error}</p>
+	{/if}
+</main>
 
-<button onclick={toggle}>Toggle Status</button>
+{#snippet formStep({ question, id, type }: { question: string; type: string; id: string })}
+	<article>
+		<div>
+			<label for={id}>{question}</label>
+			<input {type} {id} bind:value={formState.answers[id]} />
+		</div>
+		<button onclick={() => nextStep(id)}>Next</button>
+	</article>
+{/snippet}
+
+<style>
+	.error {
+		color: red;
+	}
+</style>
